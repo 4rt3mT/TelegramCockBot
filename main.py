@@ -92,6 +92,19 @@ ArrayOfDickNames = [
     "Тунец"
 ]
 
+
+
+def getDickLenght(Value):
+    if Value <= 0:
+        dick = "<3"
+        return dick
+    elif Value <=10:
+        dick = "<=3"
+        return dick
+    charCount = int(Value / 10)
+    dick = "<" + "=" * charCount + "3"
+    return dick
+
 @bot.message_handler(commands=['start'])
 def start_message(message):
     with open("users.csv", mode="r") as inp:
@@ -106,6 +119,7 @@ def start_message(message):
         button1 = types.KeyboardButton("/увеличитьпиструн")
         markup.add(button1)
         Value = randint(1,15)
+        dickString = getDickLenght(Value)
         
 
         cur.execute("""
@@ -116,6 +130,7 @@ def start_message(message):
         DickName = choice(ArrayOfDickNames).lower()
         DickFullName = WomanOrMen(DickName) +" "+ DickName    
         bot.send_message(message.chat.id, "Привет, {0.first_name}! {2} составляет: {1}см".format(message.from_user,str(Value),DickFullName), reply_markup=markup)
+        bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user,dickString))
 
 
 @bot.message_handler(commands=['увеличитьпиструн'])
@@ -130,6 +145,7 @@ def pistrun(message):
         actualLength = int(result[1])
         Value = randint(-5,10)
         actualLength = actualLength + Value
+        dickString = getDickLenght(actualLength)
         query1 = '''
             UPDATE users
             SET value = {0}
@@ -140,6 +156,7 @@ def pistrun(message):
         DickName = choice(ArrayOfDickNames).lower()
         DickFullName = WomanOrMen(DickName) +" "+ DickName
         bot.send_message(message.chat.id, "{2} увеличился на {0}см ! Теперь его длина составляет: {1}см".format(str(Value),str(actualLength),DickFullName))
+        bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user,dickString))
 
             
     else:
@@ -150,7 +167,7 @@ def pistrun(message):
         button1 = types.KeyboardButton("/увеличитьпиструн")
         markup.add(button1)
         Value = randint(1,15)
-        
+        dickString = getDickLenght(Value)
 
         cur.execute("""
             INSERT INTO users VALUES
@@ -159,6 +176,7 @@ def pistrun(message):
         con.commit()
             
         bot.send_message(message.chat.id, "Привет, {0.first_name}! {2} составляет: {1}см".format(message.from_user,str(Value),DickFullName), reply_markup=markup)
+        bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user,dickString))
 
 
 
