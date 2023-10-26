@@ -107,9 +107,7 @@ def getDickLenght(Value):
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    with open("users.csv", mode="r") as inp:
-        reader = csv.reader(inp)
-        dict_from_csv = {rows[0]: rows[1] for rows in reader}
+    
     res = cur.execute("SELECT id FROM users WHERE id={0}".format(message.from_user.id))
     if res.fetchone() is not None:
         DickName = Inflect(choice(ArrayOfDickNames).lower())
@@ -132,6 +130,28 @@ def start_message(message):
         bot.send_message(message.chat.id, "Привет, {0.first_name}! {2} составляет: {1}см".format(message.from_user,str(Value),DickFullName), reply_markup=markup)
         bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user,dickString))
 
+@bot.message_handler(commands=['top'])
+def start_message(message):
+    res = cur.execute("SELECT id,value,name FROM users ORDER BY value DESC".format(message.from_user.id))
+    result = res.fetchall()
+    if result is not None:
+        stringOfDicks = ""
+        first = True
+        for Dick in result:
+            
+            if Dick[2] is None:
+                Name = Dick[0]
+            else:
+                Name = Dick[2]
+            if first:
+                crown = "👑"
+                first = False
+            else:
+                crown = ""
+            stringOfDicks = stringOfDicks + crown  +str(Name) +crown + " - " + str(Dick[1]) + " см \n"
+        
+        bot.send_message(message.chat.id, stringOfDicks)
+    
 
 @bot.message_handler(commands=['увеличитьпиструн'])
 def pistrun(message):
