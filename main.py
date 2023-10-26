@@ -168,9 +168,9 @@ def pistrun(message):
         dickString = getDickLenght(actualLength)
         query1 = '''
             UPDATE users
-            SET value = {0}
+            SET value = {0}, name = "{2}"
             WHERE id = {1};
-            '''.format(actualLength,result[0])
+            '''.format(actualLength,result[0],message.from_user.first_name)
         cur.execute(query1)
         con.commit()
         DickName = choice(ArrayOfDickNames).lower()
