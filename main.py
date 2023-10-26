@@ -6,6 +6,7 @@ import sqlite3
 import csv
 from time import sleep
 import pymorphy2
+from datetime import date, datetime
 
 
 bot = telebot.TeleBot('6054495160:AAF3k0Ye_u2P9iy3XtEwakl9Rhis-1buIFE')
@@ -155,28 +156,39 @@ def start_message(message):
 
 @bot.message_handler(commands=['увеличитьпиструн'])
 def pistrun(message):
-    with open("users.csv", mode="r") as inp2:
-        reader2 = csv.reader(inp2)
-        dict_from_csv2 = {rows2[0]: rows2[1] for rows2 in reader2}
-    res = cur.execute("SELECT id,value FROM users WHERE id={0}".format(message.from_user.id))
+
+    res = cur.execute("SELECT id,value,lastgrow FROM users WHERE id={0}".format(message.from_user.id))
     result = res.fetchone()
+    
     if result is not None:
-        print(result[0])
-        actualLength = int(result[1])
-        Value = randint(-5,10)
-        actualLength = actualLength + Value
-        dickString = getDickLenght(actualLength)
-        query1 = '''
-            UPDATE users
-            SET value = {0}, name = "{2}"
-            WHERE id = {1};
-            '''.format(actualLength,result[0],message.from_user.first_name)
-        cur.execute(query1)
-        con.commit()
-        DickName = choice(ArrayOfDickNames).lower()
-        DickFullName = WomanOrMen(DickName) +" "+ DickName
-        bot.send_message(message.chat.id, "{2} увеличился на {0}см ! Теперь его длина составляет: {1}см".format(str(Value),str(actualLength),DickFullName))
-        bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user,dickString))
+        AllowGrow = True
+        if result[2] is not None:
+            LastGrow = datetime.strptime(result[2],"%Y-%m-%d")
+            Today = date.today()
+            Delta = datetime(Today.year, Today.month, Today.day) - LastGrow
+            if Delta != 0:
+                AllowGrow = False
+        if AllowGrow == False:
+            DickName = choice(ArrayOfDickNames).lower()
+            DickFullName = WomanOrMen(DickName) +" "+ DickName
+            bot.send_message(message.chat.id, "{0} отдыхает. Попробуй завтра".format(DickFullName))
+        else:        
+            print(result[0])
+            actualLength = int(result[1])
+            Value = randint(-5,10)
+            actualLength = actualLength + Value
+            dickString = getDickLenght(actualLength)
+            query1 = '''
+                UPDATE users
+                SET value = {0}, name = "{2}", lastgrow="{3}"
+                WHERE id = {1};
+                '''.format(actualLength,result[0],message.from_user.first_name,date.today())
+            cur.execute(query1)
+            con.commit()
+            DickName = choice(ArrayOfDickNames).lower()
+            DickFullName = WomanOrMen(DickName) +" "+ DickName
+            bot.send_message(message.chat.id, "{2} увеличился на {0}см ! Теперь его длина составляет: {1}см".format(str(Value),str(actualLength),DickFullName))
+            bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user,dickString))
 
             
     else:
