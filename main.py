@@ -6,7 +6,7 @@ import sqlite3
 import csv
 from time import sleep
 import pymorphy2
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 
 bot = telebot.TeleBot('6054495160:AAF3k0Ye_u2P9iy3XtEwakl9Rhis-1buIFE')
@@ -115,23 +115,23 @@ def start_message(message):
         bot.send_message(message.chat.id, "Привет, {0.first_name}! Нажми на кнопку что вырастить {1}.".format(message.from_user,DickName))
     else:
         markup = types.ReplyKeyboardMarkup()
-        button1 = types.KeyboardButton("/увеличитьпиструн")
-        markup.add(button1)
+        #button1 = types.KeyboardButton("/dick")
+        #markup.add(button1)
         Value = randint(1,15)
         dickString = getDickLenght(Value)
         
 
         cur.execute("""
             INSERT INTO users VALUES
-                ({0}, {1},{2})
+                ({0}, {1},"{2}","","",NULL)
         """.format(message.from_user.id,Value,message.from_user.first_name))
         con.commit()
         DickName = choice(ArrayOfDickNames).lower()
-        DickFullName = WomanOrMen(DickName) +" "+ DickName    
+        DickFullName = "Твой" +" "+ DickName    
         bot.send_message(message.chat.id, "Привет, {0.first_name}! {2} составляет: {1}см".format(message.from_user,str(Value),DickFullName), reply_markup=markup)
         bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user,dickString))
 
-@bot.message_handler(commands=['top'])
+@bot.message_handler(commands=['topdicks'])
 def start_message(message):
     res = cur.execute("SELECT id,value,name FROM users ORDER BY value DESC".format(message.from_user.id))
     result = res.fetchall()
@@ -154,7 +154,7 @@ def start_message(message):
         bot.send_message(message.chat.id, stringOfDicks)
     
 
-@bot.message_handler(commands=['увеличитьпиструн'])
+@bot.message_handler(commands=['dick'])
 def pistrun(message):
 
     res = cur.execute("SELECT id,value,lastgrow FROM users WHERE id={0}".format(message.from_user.id))
@@ -196,14 +196,14 @@ def pistrun(message):
         DickFullName = WomanOrMen(DickName) +" "+ DickName
         bot.send_message(message.chat.id, "Я {0} еще не знаю, щас запишу...".format(DickFullName.lower()))
         markup = types.ReplyKeyboardMarkup()
-        button1 = types.KeyboardButton("/увеличитьпиструн")
-        markup.add(button1)
+        #button1 = types.KeyboardButton("/увеличитьпиструн")
+        #markup.add(button1)
         Value = randint(1,15)
         dickString = getDickLenght(Value)
-
+        
         cur.execute("""
             INSERT INTO users VALUES
-                ({0}, {1}, {2})
+                ({0}, {1}, "{2}","","",NULL)
         """.format(message.from_user.id,Value,message.from_user.first_name))
         con.commit()
             
