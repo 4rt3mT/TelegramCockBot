@@ -123,8 +123,8 @@ def start_message(message):
 
         cur.execute("""
             INSERT INTO users VALUES
-                ({0}, {1},"{2}","","",NULL)
-        """.format(message.from_user.id,Value,message.from_user.first_name))
+                ({0}, {1},"{2}","","","{3}")
+        """.format(message.from_user.id,Value,message.from_user.first_name,date.today()))
         con.commit()
         DickName = choice(ArrayOfDickNames).lower()
         DickFullName = "Твой" +" "+ DickName    
@@ -203,8 +203,8 @@ def pistrun(message):
         
         cur.execute("""
             INSERT INTO users VALUES
-                ({0}, {1}, "{2}","","",NULL)
-        """.format(message.from_user.id,Value,message.from_user.first_name))
+                ({0}, {1}, "{2}","","","{3}")
+        """.format(message.from_user.id,Value,message.from_user.first_name, date.today()))
         con.commit()
             
         bot.send_message(message.chat.id, "Привет, {0.first_name}! {2} составляет: {1}см".format(message.from_user,str(Value),DickFullName), reply_markup=markup)
