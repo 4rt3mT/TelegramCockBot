@@ -1,5 +1,7 @@
 import telebot;
+import requests;
 from random import randint,choice
+from deep_translator import GoogleTranslator
 
 from telebot import types
 import sqlite3 
@@ -7,6 +9,7 @@ import csv
 from time import sleep
 import pymorphy2
 from datetime import date, datetime, timedelta
+
 
 
 bot = telebot.TeleBot('6054495160:AAF3k0Ye_u2P9iy3XtEwakl9Rhis-1buIFE')
@@ -118,6 +121,8 @@ def start_message(message):
         #button1 = types.KeyboardButton("/dick")
         #markup.add(button1)
         Value = randint(1,15)
+
+        
         dickString = getDickLenght(Value)
         
 
@@ -138,6 +143,8 @@ def start_message(message):
     if result is not None:
         stringOfDicks = ""
         first = True
+        last = len(result)
+        now = 1
         for Dick in result:
             
             if Dick[2] is None:
@@ -149,7 +156,10 @@ def start_message(message):
                 first = False
             else:
                 crown = ""
+            if now == last:
+                crown = "💀"
             stringOfDicks = stringOfDicks + crown  +str(Name) +crown + " - " + str(Dick[1]) + " см \n"
+            now = now + 1
         
         bot.send_message(message.chat.id, stringOfDicks)
     
@@ -164,9 +174,12 @@ def pistrun(message):
         AllowGrow = True
         if result[2] is not None:
             LastGrow = datetime.strptime(result[2],"%Y-%m-%d")
+
             Today = date.today()
+
             Delta = datetime(Today.year, Today.month, Today.day) - LastGrow
-            if Delta != 0:
+
+            if Delta.days == 0:
                 AllowGrow = False
         if AllowGrow == False:
             DickName = choice(ArrayOfDickNames).lower()
@@ -176,7 +189,20 @@ def pistrun(message):
             print(result[0])
             actualLength = int(result[1])
             Value = randint(-5,10)
+            if Value >= 0:
+                GrowOrNo = "увеличился"
+            else:
+                GrowOrNo = "уменьшился"
             actualLength = actualLength + Value
+            dropDick = randint(1,100)
+            death = False
+            if dropDick == 1:
+                actualLength = 0
+                death = True
+    
+            
+            
+    
             dickString = getDickLenght(actualLength)
             query1 = '''
                 UPDATE users
@@ -187,8 +213,17 @@ def pistrun(message):
             con.commit()
             DickName = choice(ArrayOfDickNames).lower()
             DickFullName = WomanOrMen(DickName) +" "+ DickName
-            bot.send_message(message.chat.id, "{2} увеличился на {0}см ! Теперь его длина составляет: {1}см".format(str(Value),str(actualLength),DickFullName))
-            bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user,dickString))
+            if death == False:
+                bot.send_message(message.chat.id, "{2} {3} на {0}см ! Теперь его длина составляет: {1}см".format(str(Value),str(actualLength),DickFullName, GrowOrNo))
+                bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user,dickString))
+                
+                response = requests.get("http://numbersapi.com/" + str(actualLength))
+                text_Eng = response.text
+                text_Rus = GoogleTranslator(source='auto', target='ru').translate(text_Eng)
+                bot.send_message(message.chat.id, text_Rus)
+            else:
+                bot.send_message(message.chat.id, "{2} {3} отвалился ! Теперь его длина составляет: {1}см".format(str(Value),str(actualLength),DickFullName, GrowOrNo))
+                bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user,dickString))    
 
             
     else:
@@ -210,7 +245,18 @@ def pistrun(message):
         bot.send_message(message.chat.id, "Привет, {0.first_name}! {2} составляет: {1}см".format(message.from_user,str(Value),DickFullName), reply_markup=markup)
         bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user,dickString))
 
+@bot.message_handler(commands=['fact'])
+def getFact(message):
+    Number = "228"
+    
+    response = requests.get("http://numbersapi.com/228")
 
+    
+    text_Eng = response.text
+    text_Rus = GoogleTranslator(source='auto', target='ru').translate(text_Eng)
+    bot.send_message(message.chat.id, text_Rus)
+    
+    
 
 						
 while True:
