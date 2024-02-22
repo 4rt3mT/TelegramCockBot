@@ -188,7 +188,13 @@ def pistrun(message):
         else:        
             print(result[0])
             actualLength = int(result[1])
-            Value = randint(-5,10)
+            RandGrow = randint(1,100)
+            if RandGrow <= 10:
+                Value = randint(-10,0)
+            else:
+                Value = randint(0,10)
+                
+                
             if Value >= 0:
                 GrowOrNo = "увеличился"
             else:
