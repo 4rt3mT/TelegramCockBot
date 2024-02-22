@@ -96,7 +96,17 @@ ArrayOfDickNames = [
     "Тунец"
 ]
 
+def plural_days(n):
+    days = ['день', 'дня', 'дней']
+    
+    if n % 10 == 1 and n % 100 != 11:
+        p = 0
+    elif 2 <= n % 10 <= 4 and (n % 100 < 10 or n % 100 >= 20):
+        p = 1
+    else:
+        p = 2
 
+    return str(n) + ' ' + days[p]
 
 def getDickLenght(Value):
     if Value <= 0:
@@ -121,6 +131,7 @@ def start_message(message):
         #button1 = types.KeyboardButton("/dick")
         #markup.add(button1)
         Value = randint(1,15)
+       
 
         
         dickString = getDickLenght(Value)
@@ -140,6 +151,10 @@ def start_message(message):
 def start_message(message):
     res = cur.execute("SELECT id,value,name FROM users ORDER BY value DESC".format(message.from_user.id))
     result = res.fetchall()
+    
+    res2 = cur.execute("SELECT id,days,lastUpdate FROM topDudes ORDER BY days DESC LIMIT 1")
+    result2 = res2.fetchone()
+   
     if result is not None:
         stringOfDicks = ""
         first = True
@@ -158,10 +173,17 @@ def start_message(message):
                 crown = ""
             if now == last:
                 crown = "💀"
+            
+            if str(Dick[0]) == str(result2[0]):
+                topName = Dick[2]
+                top = " - " + plural_days(result2[1])
+
+            
             stringOfDicks = stringOfDicks + crown  +str(Name) +crown + " - " + str(Dick[1]) + " см \n"
             now = now + 1
         
         bot.send_message(message.chat.id, stringOfDicks)
+        bot.send_message(message.chat.id, "👑" +topName+ "👑" + " в топе уже " + plural_days(result2[1]) )
     
 
 @bot.message_handler(commands=['dick'])
@@ -205,9 +227,55 @@ def pistrun(message):
             if dropDick == 1:
                 actualLength = 0
                 death = True
+            
+            
+            res3 = cur.execute("SELECT id,value,name FROM users ORDER BY value DESC LIMIT 1")
+            result3 = res3.fetchone()
+            
+            
     
-            
-            
+            res2 = cur.execute("SELECT id,days,lastUpdate FROM topDudes ORDER BY days DESC LIMIT 1")
+            result2 = res2.fetchone()
+            if result[0] != result3[0]:
+
+                if actualLength > int(result3[1]):
+                    
+                    query1 = '''
+                        UPDATE topDudes
+                        SET days = 1, id = {0}, lastUpdate="{1}"
+                        WHERE id = {2};
+                        '''.format(result[0],date.today(),result2[0])
+                      
+                    print("here2")
+                    print(result[0])
+                    print(result2[0])
+                    cur.execute(query1)
+                    con.commit()
+                    #bot.send_message(message.chat.id, message.from_user.first_name + " теперь на первом месте.")
+                    print("here3")
+            else:
+                print("here4")
+                if actualLength > int(result3[1]):
+                    query1 = '''
+                        UPDATE topDudes
+                        SET days = {3}, id = {0}, lastUpdate="{1}"
+                        WHERE id = {2};
+                        '''.format(result[0],date.today(),result2[0], result2[1] + 1)
+                    cur.execute(query1)
+                    con.commit()
+                if actualLength < int(result3[1]):
+                    
+                    res4 = cur.execute("SELECT id,value,name FROM users ORDER BY value DESC LIMIT 2")
+                    result4 = res4.fetchall()
+                    
+                    query1 = '''
+                        UPDATE topDudes
+                        SET days = {3}, id = {0}, lastUpdate="{1}"
+                        WHERE id = {2};
+                        '''.format(result4[1][0],date.today(),result2[0], 1)
+                    cur.execute(query1)
+                    con.commit()
+                    #bot.send_message(message.chat.id, result3[2] + " теперь на первом месте.")
     
             dickString = getDickLenght(actualLength)
             query1 = '''
@@ -217,6 +285,10 @@ def pistrun(message):
                 '''.format(actualLength,result[0],message.from_user.first_name,date.today())
             cur.execute(query1)
             con.commit()
+            
+
+ 
+            
             DickName = choice(ArrayOfDickNames).lower()
             DickFullName = WomanOrMen(DickName) +" "+ DickName
             if death == False:
@@ -262,7 +334,12 @@ def getFact(message):
     text_Rus = GoogleTranslator(source='auto', target='ru').translate(text_Eng)
     bot.send_message(message.chat.id, text_Rus)
     
+ 
+@bot.message_handler(commands=['all'])
+def getFact(message):
     
+    bot.send_message(message.chat.id, "@nohopeman @basangbasasiya @Nanuvie @FUCK_YOU_PIDORAS @Noface812 @Dante_Rage @wwwPlan4ik @YungJ1 - Вас вызывают на разговор")
+       
 
 						
 while True:
