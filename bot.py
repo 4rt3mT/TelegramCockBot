@@ -191,7 +191,7 @@ def pistrun(message):
 
     res = cur.execute("SELECT id,value,lastgrow FROM users WHERE id={0}".format(message.from_user.id))
     result = res.fetchone()
-    
+    print(message.chat.id)
     if result is not None:
         AllowGrow = True
         if result[2] is not None:
@@ -209,12 +209,29 @@ def pistrun(message):
             bot.send_message(message.chat.id, "{0} отдыхает. Попробуй завтра".format(DickFullName))
         else:        
             print(result[0])
+            
+            
             actualLength = int(result[1])
+
+            
+            res3 = cur.execute("SELECT id,value,name FROM users ORDER BY value DESC LIMIT 1")
+            result3 = res3.fetchone()
+            
+            if result3 - actualLength > 40:
+                advanceGrow = True
+            
+            if advanceGrow == True:
+                maxGrow = int(result3 - actualLength / 4)
+            else:
+                maxGrow = 10
+            
+            print(maxGrow)
+               
             RandGrow = randint(1,100)
             if RandGrow <= 10:
                 Value = randint(-10,0)
             else:
-                Value = randint(0,10)
+                Value = randint(0,maxGrow)
                 
                 
             if Value >= 0:
@@ -227,11 +244,6 @@ def pistrun(message):
             if dropDick == 1:
                 actualLength = 0
                 death = True
-            
-            
-            res3 = cur.execute("SELECT id,value,name FROM users ORDER BY value DESC LIMIT 1")
-            result3 = res3.fetchone()
-            
             
     
             res2 = cur.execute("SELECT id,days,lastUpdate FROM topDudes ORDER BY days DESC LIMIT 1")
@@ -340,10 +352,166 @@ def getFact(message):
     
     bot.send_message(message.chat.id, "@nohopeman @basangbasasiya @Nanuvie @FUCK_YOU_PIDORAS @Noface812 @Dante_Rage @wwwPlan4ik @YungJ1 - Вас вызывают на разговор")
        
+@bot.message_handler(commands=['change'])
+def add_length(message):
+    # Проверяем, имеет ли пользователь айди 696969
+    if message.from_user.id != 1063677223:
+        bot.send_message(message.chat.id, "У вас нет разрешения на выполнение этой команды.")
+        return
 
+    # Разбиваем сообщение на айди и значение для увеличения
+    try:
+        _, user_id, increase_value = message.text.split()
+        user_id = str(user_id)
+        increase_value = int(increase_value)
+    except ValueError:
+        bot.send_message(message.chat.id, "Неправильный формат сообщения. Используйте /AddLenght <name> <value>")
+        return
+
+    # Проверяем, есть ли пользователь с указанным айди в базе данных
+    res = cur.execute("SELECT id, value, name FROM users WHERE name=?", (user_id,))
+    result = res.fetchone()
+    if result is None:
+        bot.send_message(message.chat.id, "Пользователя с таким именем не найдено.")
+        return
+
+    # Увеличиваем значение и обновляем базу данных
+    new_value = result[1] + increase_value
+    query = '''
+            UPDATE users
+            SET value = ?
+            WHERE name = ?;
+            '''
+    cur.execute(query, (new_value, user_id))
+    con.commit()
+
+    bot.send_message(message.chat.id, f"Длина члена пользователя {result[2]} изменена на {increase_value} см. Новая длина: {new_value} см.")
+
+def get_combo_text(dice_value: int):
+    """
+    Возвращает то, что было на конкретном дайсе-казино
+    :param dice_value: значение дайса (число)
+    :return: массив строк, содержащий все выпавшие элементы в виде текста
+
+    Альтернативный вариант (ещё раз спасибо t.me/svinerus):
+        return [casino[(dice_value - 1) // i % 4]for i in (1, 4, 16)]
+    """
+    #           0       1         2        3
+    values = ["BAR", "виноград", "лимон", "семь"]
+
+    dice_value -= 1
+    result = []
+    for _ in range(3):
+        result.append(values[dice_value % 4])
+        dice_value //= 4
+    return result
+
+@bot.message_handler(commands=['slot'])
+def slot(message):
+    
+    bot.send_message(message.chat.id, message.from_user.first_name + " крутит рулетку..." )
+    
+    res = cur.execute("SELECT id, value, name, casino, lastGrow FROM users WHERE name=?", (message.from_user.first_name,))
+    result = res.fetchone()
+    if result is None:
+        bot.send_message(message.chat.id, "Пользователя с таким именем не найдено.")
+        return
+    
+    tickets = result[3]
+    
+    AllowGrow = True
+    if result[4] is not None:
+        LastGrow = datetime.strptime(result[4],"%Y-%m-%d")
+
+        Today = date.today()
+
+        Delta = datetime(Today.year, Today.month, Today.day) - LastGrow
+
+        if Delta.days == 0:
+            AllowGrow = False
+    if AllowGrow == True:
+        tickets = 0
+
+    
+    
+    if tickets >= 5:
+        bot.send_message(message.chat.id, "Сегодня больше крутить нельзя. Попробуйте завтра.")
+        return
+    # Увеличиваем значение и обновляем базу данных
+    new_value = result[1] - 1
+    tickets = tickets + 1
+    query = '''
+            UPDATE users
+            SET value = ?, casino = ?
+            WHERE name = ?;
+            '''
+    cur.execute(query, (new_value,tickets, message.from_user.first_name))
+    con.commit()
+    
+    grow = True
+    data = bot.send_dice(message.chat.id, emoji='🎰')
+    sleep(1.5)
+    resultCombo = get_combo_text(data.dice.value)
+    if resultCombo[0] == "семь" and resultCombo[0] == resultCombo[1] and resultCombo[0] == resultCombo[2]: # Три семерки
+        text = "ДЖЕКПОТ! Ваш писюн увеличился на 7см"
+        new_value = int(result[1]) + 8
+    elif resultCombo[0] == "семь" and resultCombo[0] == resultCombo[1]:                          # Две семерки
+        text = "Поздравляю, вы выиграли. Ваш писюн увеличился на 5 см."
+        new_value = int(result[1]) + 6
+    elif resultCombo[0] == "BAR" and  resultCombo[0] == resultCombo[1] and resultCombo[0] == resultCombo[2]: # Три бара
+        text = "Поздравляю, вы выиграли... Но не то что хотелось,  ваш писюн уменьшился на 5 см."
+        new_value = int(result[1]) - 4
+    elif resultCombo[0] == "BAR" and  resultCombo[0] == resultCombo[1]:                                         # Два бара
+        text = "Поздравляю, вы выиграли. Ваш писюн увеличился на 3 см."
+        new_value = int(result[1]) + 4
+    elif resultCombo[0] == "виноград" and  resultCombo[0] == resultCombo[1] and resultCombo[0] == resultCombo[2]: # Три винограда
+        text = "Поздравляю, вы выиграли. Ваш писюн увеличился на 4 см."
+        new_value = int(result[1]) + 5
+    elif resultCombo[0] == "виноград" and  resultCombo[0] == resultCombo[1]:                                         # Два винограда
+        text = "Поздравляю, вы выиграли. Ваш писюн увеличился на 2 см."
+        new_value = int(result[1]) + 3
+    elif resultCombo[0] == "лимон" and  resultCombo[0] == resultCombo[1] and resultCombo[0] == resultCombo[2]:  # Три лимона
+        text = "Поздравляю, вы выиграли. Ваш писюн увеличился на 6 см."
+        new_value = int(result[1]) + 7
+    elif resultCombo[0] == "лимон" and  resultCombo[0] == resultCombo[1]:                                         # Два лимона
+        text = "Поздравляю, вы выиграли. Ваш писюн увеличился на 3 см."
+        new_value = int(result[1]) + 4
+    elif resultCombo[1] == "BAR" and  resultCombo[1] == resultCombo[2]:                                         # Два бара сзади
+        text = "Поздравляю, вы выиграли. Ваш писюн увеличился на 3 см."
+        new_value = int(result[1]) + 4
+    elif resultCombo[1] == "виноград" and  resultCombo[1] == resultCombo[2]:                                         # Два винограда сзади
+        text = "Поздравляю, вы выиграли. Ваш писюн увеличился на 3 см."
+        new_value = int(result[1]) + 4
+    elif resultCombo[1] == "лимон" and  resultCombo[1] == resultCombo[2]:                                         # Два лимона сзади
+        text = "Поздравляю, вы выиграли. Ваш писюн увеличился на 3 см."
+        new_value = int(result[1]) + 4
+    elif resultCombo[1] == "семь" and resultCombo[1] == resultCombo[2]:                          # Две семерки C ЖОПЫ ЧТОБЫ ТЕТЕ САШЕ БЫЛО ПРИЯТНО
+        text = "Поздравляю, вы выиграли. Ваш писюн увеличился на 5 см."
+        new_value = int(result[1]) + 6
+    elif resultCombo[0] == resultCombo[2]:
+        text = "Вы ничего не проиграли."
+        new_value = result[1] + 1
+    else:
+        text = "Вы проиграли. Писюн уменьшился на 1см"
+        grow = False
+
+    if grow == True:
+        query = '''
+        UPDATE users
+        SET value = ?
+        WHERE name = ?;
+        '''
+        cur.execute(query, (new_value, message.from_user.first_name))
+        con.commit()
+            
+    
+    
+    bot.send_message(message.chat.id, text )
+   
 						
 while True:
     try:
+        #bot.send_message("-1002101471139", "#остановитесь")
         bot.polling(none_stop=True)
     except Exception as _ex:
         print(_ex)
