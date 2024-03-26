@@ -12,7 +12,7 @@ from datetime import date, datetime, timedelta
 
 
 
-bot = telebot.TeleBot('6054495160:AAF3k0Ye_u2P9iy3XtEwakl9Rhis-1buIFE')
+bot = telebot.TeleBot('6473963712:AAEj_wDB1gY2lM3E8vjQslJfuEjJR-0I7pA')
 
 con = sqlite3.connect("main.db",check_same_thread=False)
 cur = con.cursor()
@@ -186,156 +186,142 @@ def start_message(message):
         bot.send_message(message.chat.id, "👑" +topName+ "👑" + " в топе уже " + plural_days(result2[1]) )
     
 
+
+import requests
+from random import randint, choice
+from datetime import datetime, date
+from googletrans import Translator
+from telebot import types
+
+translator = Translator()
+
+def get_user_data(user_id):
+    """Получает данные пользователя из базы данных"""
+    res = cur.execute("SELECT id, value, lastgrow FROM users WHERE id={0}".format(user_id))
+    return res.fetchone()
+
+def is_growable(last_grow):
+    """Проверяет, можно ли увеличить член пользователя"""
+    if last_grow is None:
+        return True
+    last_grow_date = datetime.strptime(last_grow, "%Y-%m-%d")
+    today = date.today()
+    delta = datetime(today.year, today.month, today.day) - last_grow_date
+    return delta.days != 0
+
+def get_max_grow(result, actual_length):
+    """Вычисляет максимальный прирост длины члена"""
+    res3 = cur.execute("SELECT id, value, name FROM users ORDER BY value DESC LIMIT 1")
+    result3 = res3.fetchone()
+    advance_grow = result3[1] - actual_length > 40
+    if advance_grow:
+        return round((result3[1] - actual_length) / 4)
+    else:
+        return 10
+
+def update_top_dudes(result, result3, actual_length):
+    """Обновляет топ пользователей, если необходимо"""
+    res2 = cur.execute("SELECT id, days, lastUpdate FROM topDudes ORDER BY days DESC LIMIT 1")
+    result2 = res2.fetchone()
+    if result[0] != result3[0]:
+        if actual_length > int(result3[1]):
+            query1 = '''
+                UPDATE topDudes
+                SET days = 1, id = {0}, lastUpdate="{1}"
+                WHERE id = {2};
+                '''.format(result[0], date.today(), result2[0])
+            cur.execute(query1)
+            con.commit()
+    else:
+        if actual_length > int(result3[1]):
+            query1 = '''
+                UPDATE topDudes
+                SET days = {3}, id = {0}, lastUpdate="{1}"
+                WHERE id = {2};
+                '''.format(result[0], date.today(), result2[0], result2[1] + 1)
+            cur.execute(query1)
+            con.commit()
+        if actual_length < int(result3[1]):
+            res4 = cur.execute("SELECT id, value, name FROM users ORDER BY value DESC LIMIT 2")
+            result4 = res4.fetchall()
+            query1 = '''
+                UPDATE topDudes
+                SET days = {3}, id = {0}, lastUpdate="{1}"
+                WHERE id = {2};
+                '''.format(result4[1][0], date.today(), result2[0], 1)
+            cur.execute(query1)
+            con.commit()
+
+def update_user_data(result, actual_length, first_name):
+    """Обновляет данные пользователя в базе данных"""
+    query1 = '''
+        UPDATE users
+        SET value = {0}, name = "{2}", lastgrow="{3}"
+        WHERE id = {1};
+        '''.format(actual_length, result[0], first_name, date.today())
+    cur.execute(query1)
+    con.commit()
+
+def send_grow_message(bot, message, actual_length, Value, DickFullName, GrowOrNo, dickString):
+    """Отправляет сообщение о приросте длины члена"""
+    bot.send_message(message.chat.id, "{2} {3} на {0}см ! Теперь его длина составляет: {1}см".format(str(Value), str(actual_length), DickFullName, GrowOrNo))
+    bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user, dickString))
+    response = requests.get("http://numbersapi.com/" + str(actual_length))
+    text_Eng = response.text
+    text_Rus = translator.translate(text_Eng, dest='ru').text
+    bot.send_message(message.chat.id, text_Rus)
+
+def send_death_message(bot, message, actual_length, DickFullName, GrowOrNo, dickString):
+    """Отправляет сообщение о смерти члена"""
+    bot.send_message(message.chat.id, "{2} {3} отвалился ! Теперь его длина составляет: {1}см".format(str(Value), str(actual_length), DickFullName, GrowOrNo))
+    bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user, dickString))
+
 @bot.message_handler(commands=['dick'])
 def pistrun(message):
-
-    res = cur.execute("SELECT id,value,lastgrow FROM users WHERE id={0}".format(message.from_user.id))
-    result = res.fetchone()
-    print(message.chat.id)
-    if result is not None:
-        AllowGrow = True
-        if result[2] is not None:
-            LastGrow = datetime.strptime(result[2],"%Y-%m-%d")
-
-            Today = date.today()
-
-            Delta = datetime(Today.year, Today.month, Today.day) - LastGrow
-
-            if Delta.days == 0:
-                AllowGrow = False
-        if AllowGrow == False:
+    user_data = get_user_data(message.from_user.id)
+    if user_data:
+        result = user_data
+        AllowGrow = is_growable(result[2])
+        if not AllowGrow:
             DickName = choice(ArrayOfDickNames).lower()
             DickFullName = WomanOrMen(DickName) +" "+ DickName
             bot.send_message(message.chat.id, "{0} отдыхает. Попробуй завтра".format(DickFullName))
-        else:        
-            
-            
-            
-            actualLength = int(result[1])
-
-            
-            res3 = cur.execute("SELECT id,value,name FROM users ORDER BY value DESC LIMIT 1")
-            result3 = res3.fetchone()
-            advanceGrow = False
-            print(round((result3[1] - actualLength) / 4))
-            print((result3[1] - actualLength) / 4)
-            if result3[1] - actualLength > 40:
-                advanceGrow = True
-            
-            if advanceGrow == True:
-                maxGrow = round((result3[1] - actualLength) / 4)
-            else:
-                maxGrow = 10
-            
-            print(maxGrow)
-               
-            RandGrow = randint(1,100)
-            if RandGrow <= 10:
-                Value = randint(-10,0)
-            else:
-                Value = randint(0,maxGrow)
-                
-                
-            if Value >= 0:
-                GrowOrNo = "увеличился"
-            else:
-                GrowOrNo = "уменьшился"
-            actualLength = actualLength + Value
-            dropDick = randint(1,100)
-            death = False
-            if dropDick == 1:
-                actualLength = 0
-                death = True
-            
-    
-            res2 = cur.execute("SELECT id,days,lastUpdate FROM topDudes ORDER BY days DESC LIMIT 1")
-            result2 = res2.fetchone()
-            if result[0] != result3[0]:
-
-                if actualLength > int(result3[1]):
-                    
-                    query1 = '''
-                        UPDATE topDudes
-                        SET days = 1, id = {0}, lastUpdate="{1}"
-                        WHERE id = {2};
-                        '''.format(result[0],date.today(),result2[0])
-                      
-                    print("here2")
-                    print(result[0])
-                    print(result2[0])
-                    cur.execute(query1)
-                    con.commit()
-                    #bot.send_message(message.chat.id, message.from_user.first_name + " теперь на первом месте.")
-                    print("here3")
-            else:
-                print("here4")
-                if actualLength > int(result3[1]):
-                    query1 = '''
-                        UPDATE topDudes
-                        SET days = {3}, id = {0}, lastUpdate="{1}"
-                        WHERE id = {2};
-                        '''.format(result[0],date.today(),result2[0], result2[1] + 1)
-                    cur.execute(query1)
-                    con.commit()
-                if actualLength < int(result3[1]):
-                    
-                    res4 = cur.execute("SELECT id,value,name FROM users ORDER BY value DESC LIMIT 2")
-                    result4 = res4.fetchall()
-                    
-                    query1 = '''
-                        UPDATE topDudes
-                        SET days = {3}, id = {0}, lastUpdate="{1}"
-                        WHERE id = {2};
-                        '''.format(result4[1][0],date.today(),result2[0], 1)
-                    cur.execute(query1)
-                    con.commit()
-                    #bot.send_message(message.chat.id, result3[2] + " теперь на первом месте.")
-    
-            dickString = getDickLenght(actualLength)
-            query1 = '''
-                UPDATE users
-                SET value = {0}, name = "{2}", lastgrow="{3}"
-                WHERE id = {1};
-                '''.format(actualLength,result[0],message.from_user.first_name,date.today())
-            cur.execute(query1)
-            con.commit()
-            
-
- 
-            
+        else:
             DickName = choice(ArrayOfDickNames).lower()
             DickFullName = WomanOrMen(DickName) +" "+ DickName
-            if death == False:
-                bot.send_message(message.chat.id, "{2} {3} на {0}см ! Теперь его длина составляет: {1}см".format(str(Value),str(actualLength),DickFullName, GrowOrNo))
-                bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user,dickString))
-                
-                response = requests.get("http://numbersapi.com/" + str(actualLength))
-                text_Eng = response.text
-                text_Rus = GoogleTranslator(source='auto', target='ru').translate(text_Eng)
-                bot.send_message(message.chat.id, text_Rus)
-            else:
-                bot.send_message(message.chat.id, "{2} {3} отвалился ! Теперь его длина составляет: {1}см".format(str(Value),str(actualLength),DickFullName, GrowOrNo))
-                bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user,dickString))    
-
+            actualLength = int(result[1])
+            res3 = cur.execute("SELECT id,value,name FROM users ORDER BY value DESC LIMIT 1")
+            result3 = res3.fetchone()
             
+            maxGrow = get_max_grow(result, actualLength)
+            Value = randint(-10, maxGrow) if randint(1, 100) <= 10 else randint(0, maxGrow)
+            GrowOrNo = "увеличился" if Value >= 0 else "уменьшился"
+            actualLength += Value
+            death = randint(1, 100) == 1
+            update_top_dudes(result,result3, actualLength)
+            update_user_data(result, actualLength, message.from_user.first_name)
+            dickString = getDickLenght(actualLength)
+            if not death:
+                send_grow_message(bot, message, actualLength, Value, DickFullName, GrowOrNo, dickString)
+            else:
+                send_death_message(bot, message, actualLength, DickFullName, GrowOrNo, dickString)
     else:
         DickName = choice(ArrayOfDickNames).lower()
         DickFullName = WomanOrMen(DickName) +" "+ DickName
         bot.send_message(message.chat.id, "Я {0} еще не знаю, щас запишу...".format(DickFullName.lower()))
-        markup = types.ReplyKeyboardMarkup()
-        #button1 = types.KeyboardButton("/увеличитьпиструн")
-        #markup.add(button1)
-        Value = randint(1,15)
+        Value = randint(1, 15)
         dickString = getDickLenght(Value)
-        
         cur.execute("""
             INSERT INTO users VALUES
                 ({0}, {1}, "{2}","","","{3}",0,"{4}")
-        """.format(message.from_user.id,Value,message.from_user.first_name, date.today(), date.today()))
+        """.format(message.from_user.id, Value, message.from_user.first_name, date.today(), date.today()))
         con.commit()
-            
-        bot.send_message(message.chat.id, "Привет, {0.first_name}! {2} составляет: {1}см".format(message.from_user,str(Value),DickFullName), reply_markup=markup)
-        bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n  {1}".format(message.from_user,dickString))
+        bot.send_message(message.chat.id, "Привет, {0.first_name}! {2} составляет: {1}см".format(message.from_user, str(Value), DickFullName), reply_markup=markup)
+        bot.send_message(message.chat.id, "Член {0.first_name} выглядит так: \n {1}".format(message.from_user, dickString))
+
+
+
+
 
 @bot.message_handler(commands=['fact'])
 def getFact(message):
@@ -530,7 +516,65 @@ def slot(message):
     
     
     bot.send_message(message.chat.id, text )
-   
+  
+
+@bot.message_handler(func=lambda message: True)
+def echo_message(message):
+    # Проверяем текст сообщения
+    print(message.text)
+    messageText = message.text.lower().replace("?", "")
+    messageText = messageText.replace(".", "")
+    messageText = messageText.replace("!", "")
+    
+    if messageText == "ура":
+        bot.reply_to(message, "Ура!")
+        
+    elif messageText == "да":
+        bot.reply_to(message, "Пизда")
+        
+    elif messageText == "где":
+        bot.reply_to(message, "В пизде")
+        
+    elif messageText == "че":
+        bot.reply_to(message, "Хуй через плечо")
+        
+    elif messageText == "чё":
+        bot.reply_to(message, "Хуй через плечо")
+    
+    
+    elif messageText == "денчик":
+        bot.reply_to(message, "Хуенчик")
+    elif messageText == "дэнис":
+        bot.reply_to(message, "Пэнис")
+    elif messageText == "денис":
+        bot.reply_to(message, "Пенис")
+    elif messageText == "сашка":
+        bot.reply_to(message, "Хуяшка")
+    elif messageText == "пашка":
+        bot.reply_to(message, "Хуяшка")
+    elif messageText == "филя":
+        bot.reply_to(message, "Хуиля")
+    elif messageText == "никита":
+        bot.reply_to(message, "Хуи́та")
+    elif messageText == "фока":
+        bot.reply_to(message, "Хуёка")
+    elif messageText == "фокинс":
+        bot.reply_to(message, "Хуёкинс")
+    elif messageText == "данечка":
+        bot.reply_to(message, "Хуянечка")
+    elif messageText == "павел":
+        bot.reply_to(message, "Хуявел")
+    elif messageText == "павел":
+        bot.reply_to(message, "Хуявел")
+    elif messageText == "серафимка":
+        bot.reply_to(message, "Хуинка")
+        
+ 
+@bot.message_handler(func=lambda message: True, content_types=['left_chat_member'])
+def handle_left_chat_member(message):
+    left_user = message.left_chat_member
+    bot.reply_to(message, f"{left_user.first_name} съебал с позором.")
+ 
 						
 while True:
     try:
