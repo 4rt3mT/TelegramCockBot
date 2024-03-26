@@ -12,7 +12,7 @@ from datetime import date, datetime, timedelta
 
 
 
-bot = telebot.TeleBot('6473963712:AAEj_wDB1gY2lM3E8vjQslJfuEjJR-0I7pA')
+bot = telebot.TeleBot('6054495160:AAF3k0Ye_u2P9iy3XtEwakl9Rhis-1buIFE')
 
 con = sqlite3.connect("main.db",check_same_thread=False)
 cur = con.cursor()
