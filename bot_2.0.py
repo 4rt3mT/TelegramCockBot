@@ -356,18 +356,50 @@ def pistrun(message):
 
 @bot.message_handler(commands=['duel'])
 def duel_command(message):
-    if message.chat.id != "-1002101471139":
+
+    print(message.chat.id)
+    if message.chat.id != -1002101471139:
+        bot.reply_to(message, "Иди-ка ты нахуй, наебать не получится")
         return
-    if len(message.text.split()) != 2:
+
+    if len(message.text.split()) != 2 and len(message.text.split()) != 3:
         bot.reply_to(message, "Используйте команду /duel [имя_пользователя]")
         return
     
     # Получаем имя пользователя, которому предложен дуэль
     challenged_name = message.text.split()[1]
+    
+    
+    if len(message.text.split()) == 3:
+        debt =  message.text.split()[2]
+    else:
+        debt = "5"
+        
+    if int(debt) > 50:
+        bot.reply_to(message, "Ставка не может быть выше 50")
+        return
+    if int(debt) < 0:
+        bot.reply_to(message, "Сука ну ты  дурак? Нахуя вот мне думать и обрабатывать событие когда какой то чушпан напишет число меньше нуля")
+        return
+        
+        
+    # Получаем id пользователя, которому предложен дуэль
+    cur.execute("SELECT id FROM users WHERE name=?", (challenged_name,))
+    row = cur.fetchone()
+    if row is None:
+        bot.reply_to(message, f"Пользователь {challenged_name} не найден")
+        return
+    challenged_id = row[0]
 
+
+    
     # Получаем id пользователя, который предложил дуэль
     challenger_id = message.from_user.id
-
+    cur.execute("SELECT value FROM users WHERE id=?", (challenged_id,))
+    actualDick = cur.fetchone()[0]
+    if int(actualDick) < int(debt):
+        bot.reply_to(message, "У тебя итак долг, куда еще больше")
+        return
     # Получаем id пользователя, которому предложен дуэль
     cur.execute("SELECT id FROM users WHERE name=?", (challenged_name,))
     row = cur.fetchone()
@@ -388,7 +420,7 @@ def duel_command(message):
     accept_button = telebot.types.InlineKeyboardButton("Принять ✔", callback_data='accept')
     decline_button = telebot.types.InlineKeyboardButton("Отказаться ❌", callback_data='decline')
     markup.row(accept_button, decline_button)
-    msg = bot.send_message(message.chat.id, f"{challenged_name} вас вызывают на дуэль 🎲 Ставка: 5см", reply_markup=markup)
+    msg = bot.send_message(message.chat.id, f"[{challenged_name}](tg://user?id={challenged_id}) вас вызывают на дуэль 🎲 Ставка: {debt}", reply_markup=markup, parse_mode='MarkdownV2')
     cur.execute("INSERT INTO duels (id,challenger_id, challenged_id, status) VALUES (?,?, ?, ?)", (msg.message_id,challenger_id, challenged_id, "Ожидание"))
     con.commit()
     
@@ -408,7 +440,8 @@ def handle_callback_query(call):
     
     if duel_data:
         challenger_id, challenged_id = duel_data
-         
+        debt = call.message.text
+        debt = int(debt.split("Ставка: ",1)[1])
         cur.execute("SELECT name FROM users WHERE id=?", (challenged_id,))
         challenged_name = cur.fetchone()[0]
         
@@ -429,8 +462,8 @@ def handle_callback_query(call):
                 result_challenger = data.dice.value
                 result_challenged = data2.dice.value
                 if result_challenger > result_challenged:
-                    cur.execute("UPDATE users SET value = value + 5 WHERE id=?", (challenger_id,))
-                    cur.execute("UPDATE users SET value = value - 5 WHERE id=?", (challenged_id,))
+                    cur.execute("UPDATE users SET value = value + ? WHERE id=?", (debt,challenger_id,))
+                    cur.execute("UPDATE users SET value = value - ? WHERE id=?", (debt,challenged_id,))
                     bot.reply_to(call.message, f"Победитель: {challenger_name}")
                     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                       text=f"Игра закончилась ✔\n{challenger_name} против {challenged_name}\n----------\nИтог: {challenger_name} - победитель.")
@@ -442,8 +475,8 @@ def handle_callback_query(call):
                 else:
                     
 
-                    cur.execute("UPDATE users SET value = value - 5 WHERE id=?", (challenger_id,))
-                    cur.execute("UPDATE users SET value = value + 5 WHERE id=?", (challenged_id,))
+                    cur.execute("UPDATE users SET value = value - ? WHERE id=?", (debt,challenger_id,))
+                    cur.execute("UPDATE users SET value = value + ? WHERE id=?", (debt,challenged_id,))
                     bot.reply_to(call.message, f"Победитель: {challenged_name}\n")
                     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                       text=f"Игра закончилась ✔\n{challenger_name} против {challenged_name}\n----------\nИтог: {challenged_name} - победитель.")
@@ -478,8 +511,8 @@ def getFact(message):
  
 @bot.message_handler(commands=['all'])
 def getFact(message):
-    
-    bot.send_message(message.chat.id, "@nohopeman @basangbasasiya @Nanuvie @FUCK_YOU_PIDORAS @Noface812 @Dante_Rage @wwwPlan4ik @YungJ1 - Вас вызывают на разговор")
+     
+    bot.send_message(message.chat.id, "[Артем](tg://user?id=1063677223), [Саша](tg://user?id=1473377894),[Филя](tg://user?id=108150618),[Никита](tg://user?id=917793861),[Паша](tg://user?id=495605727),[Серафим](tg://user?id=1193757607),[Фока](tg://user?id=822344339),[Артем](tg://user?id=1063677223),[Денчик](tg://user?id=680793601) \- Вас вызывают на разговор", parse_mode='MarkdownV2')
        
 @bot.message_handler(commands=['change'])
 def add_length(message):
@@ -701,6 +734,14 @@ def echo_message(message):
         bot.reply_to(message, "Хуиля")
     elif messageText == "никита":
         bot.reply_to(message, "Хуи́та")
+    elif messageText == "никитка":
+        bot.reply_to(message, "Хуи́тка")
+    elif messageText == "артем":
+        bot.reply_to(message, "Гандон")
+    elif messageText == "артём":
+        bot.reply_to(message, "Гандон")
+    elif messageText == "пидор":
+        bot.reply_to(message, "Асуждаю")
     elif messageText == "фока":
         bot.reply_to(message, "Хуёка")
     elif messageText == "фокинс":
@@ -719,10 +760,8 @@ def echo_message(message):
         bot.reply_to(message, "Хуенчик")
     elif messageText == "саша":
         bot.reply_to(message, "Хуяша")
-    elif messageText == "артем":
-        bot.reply_to(message, "Я хуй знает что придумать жду ваши варианты")
     elif messageText == "ортем":
-        bot.reply_to(message, "Я хуй знает что придумать жду ваши варианты")
+        bot.reply_to(message, "Гандон?")
         
  
 @bot.message_handler(func=lambda message: True, content_types=['left_chat_member'])
